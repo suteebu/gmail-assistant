@@ -10,35 +10,25 @@
   // the user's existing authenticated session — no OAuth setup required.
 
   function getGmailContext() {
-    let ik = null;
-    let at = null;
+    // ik lives at GLOBALS[9] in current Gmail
+    const ik = window.GLOBALS?.[9] || null;
 
+    // at: CSRF action token — scan inline scripts
+    let at = null;
     for (const script of document.scripts) {
       const t = script.textContent;
       if (t.length < 20) continue;
-
-      if (!ik) {
-        const m = t.match(/"ik"\s*:\s*"([A-Za-z0-9_-]{4,16})"/);
-        if (m) ik = m[1];
-      }
-
-      if (!at) {
-        const m =
-          t.match(/\["GMAIL_AT"(?:,[^\]]*){0,5},"([A-Za-z0-9_-]{20,})"\]/) ||
-          t.match(/"at"\s*:\s*"([A-Za-z0-9_-]{20,})"/) ||
-          t.match(/GM_ACTION_TOKEN\s*=\s*"([A-Za-z0-9_-]{20,})"/);
-        if (m) at = m[1];
-      }
-
-      if (ik && at) break;
+      const m =
+        t.match(/\["GMAIL_AT"(?:,[^\]]*){0,5},"([A-Za-z0-9_-]{20,})"\]/) ||
+        t.match(/"at"\s*:\s*"([A-Za-z0-9_-]{20,})"/) ||
+        t.match(/GM_ACTION_TOKEN\s*=\s*"([A-Za-z0-9_-]{20,})"/);
+      if (m) { at = m[1]; break; }
     }
-
-    if (!ik) ik = document.querySelector('[name="ik"]')?.value || null;
     if (!at) at = document.querySelector('[name="at"]')?.value || null;
 
     return { ik, at };
   }
-
+  
   function gmailBase() {
     const m = location.pathname.match(/^(\/mail\/u\/\d+\/)/);
     return `https://mail.google.com${m ? m[1] : '/mail/u/0/'}`;
@@ -348,14 +338,17 @@
   }
 
   function findToolbar() {
-    return document.querySelector('.ade') || document.querySelector('[gh="mtb"]');
+    return document.querySelector('[gh="mtb"] [act="7"]') ||
+           document.querySelector('[gh="mtb"]');
   }
 
   function injectButton() {
     if (document.getElementById(BUTTON_ID)) return;
-    const toolbar = findToolbar();
-    if (!toolbar) return;
-    toolbar.insertBefore(createButton(), toolbar.firstChild);
+    const anchor = findToolbar();
+    if (!anchor) return;
+    const parent = anchor.getAttribute('act') === '7' ? anchor.parentElement : anchor;
+    const ref    = anchor.getAttribute('act') === '7' ? anchor : anchor.firstChild;
+    parent.insertBefore(createButton(), ref);
   }
 
   // ── Mutation observer ─────────────────────────────────────────────────────
