@@ -5,9 +5,6 @@
   const OVERLAY_ID = 'gsf-overlay';
 
   // ── Gmail session context ─────────────────────────────────────────────────
-  // Gmail embeds an installation key (ik) and a CSRF action token (at) in its
-  // page scripts. We read them here so we can make same-origin requests using
-  // the user's existing authenticated session — no OAuth setup required.
 
   function getGmailContext() {
     // ik lives at GLOBALS[9] in current Gmail
@@ -28,7 +25,7 @@
 
     return { ik, at };
   }
-  
+
   function gmailBase() {
     const m = location.pathname.match(/^(\/mail\/u\/\d+\/)/);
     return `https://mail.google.com${m ? m[1] : '/mail/u/0/'}`;
@@ -47,7 +44,6 @@
     if (!res.ok) throw new Error(`Search failed (HTTP ${res.status})`);
 
     const text = await res.text();
-    // Gmail prefixes JSON responses with ")]}'\n" to prevent JSON hijacking
     const json = JSON.parse(text.replace(/^\)\]\}'\n?/, ''));
     return parseThreadList(json);
   }
@@ -64,8 +60,7 @@
         let from = '';
         for (let i = 4; i <= 6; i++) {
           if (typeof node[i] === 'string' && node[i].includes('@')) {
-            from = node[i];
-            break;
+            from = node[i]; break;
           }
         }
 
@@ -73,8 +68,7 @@
         for (let i = 6; i <= 12; i++) {
           const v = parseInt(node[i], 10);
           if (v > 1_000_000_000 && v < 9_999_999_999) {
-            date = new Date(v * 1000).toISOString();
-            break;
+            date = new Date(v * 1000).toISOString(); break;
           }
         }
 
@@ -88,13 +82,8 @@
     return threads;
   }
 
-  async function archiveThreads(ids) {
-    await batchAction('archiveMessages', ids);
-  }
-
-  async function trashThreads(ids) {
-    await batchAction('deleteMessages', ids);
-  }
+  async function archiveThreads(ids) { await batchAction('archiveMessages', ids); }
+  async function trashThreads(ids)   { await batchAction('deleteMessages',  ids); }
 
   async function batchAction(action, ids) {
     const { ik, at } = getGmailContext();
@@ -130,9 +119,7 @@
       return new Date(iso).toLocaleDateString(undefined, {
         year: 'numeric', month: 'short', day: 'numeric',
       });
-    } catch {
-      return iso;
-    }
+    } catch { return iso; }
   }
 
   // ── Overlay ───────────────────────────────────────────────────────────────
@@ -266,9 +253,7 @@
         if (set.has(tr.dataset.id)) tr.remove();
       });
       updateCount();
-      if (div.querySelectorAll('tbody tr').length === 0) {
-        setTimeout(removeOverlay, 1200);
-      }
+      if (div.querySelectorAll('tbody tr').length === 0) setTimeout(removeOverlay, 1200);
     }
 
     div.querySelector('#gsf-archive').addEventListener('click', async () => {
@@ -279,9 +264,7 @@
         await archiveThreads(ids);
         setStatus(`Archived ${ids.length} message${ids.length > 1 ? 's' : ''}.`);
         removeRows(ids);
-      } catch (e) {
-        setStatus(`Error: ${e.message}`, true);
-      }
+      } catch (e) { setStatus(`Error: ${e.message}`, true); }
     });
 
     div.querySelector('#gsf-delete').addEventListener('click', async () => {
@@ -292,9 +275,7 @@
         await trashThreads(ids);
         setStatus(`Deleted ${ids.length} message${ids.length > 1 ? 's' : ''}.`);
         removeRows(ids);
-      } catch (e) {
-        setStatus(`Error: ${e.message}`, true);
-      }
+      } catch (e) { setStatus(`Error: ${e.message}`, true); }
     });
   }
 
@@ -325,9 +306,7 @@
       try {
         const threads = await searchSender(email);
         showMessages(email, threads);
-      } catch (err) {
-        showError(err.message);
-      }
+      } catch (err) { showError(err.message); }
     });
 
     btn.addEventListener('keydown', (e) => {
@@ -358,7 +337,7 @@
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
       injectButton();
-      if (document.getElementById(OVERLAY_ID) && !findToolbar()) removeOverlay();
+      if (document.getElementById(OVERLAY_ID) && !document.querySelector('[gh="mtb"]')) removeOverlay();
     }, 300);
   });
 
