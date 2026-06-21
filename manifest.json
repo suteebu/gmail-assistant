@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Gmail Sender Filter",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "View, archive, or delete all inbox messages from the same sender without leaving your current email.",
   "permissions": ["scripting"],
   "host_permissions": [

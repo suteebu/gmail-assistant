@@ -6,41 +6,25 @@
 
   // ── Gmail session context ─────────────────────────────────────────────────
 
-  function readFromPageWorld(code) {
-    return new Promise((resolve) => {
-      const msgType = 'gsf-' + Math.random().toString(36).slice(2);
-      const handler = (e) => {
-        if (e.source === window && e.data?.type === msgType) {
-          window.removeEventListener('message', handler);
-          resolve(e.data.value);
-        }
-      };
-      window.addEventListener('message', handler);
-      const s = document.createElement('script');
-      s.textContent = `window.postMessage({type:${JSON.stringify(msgType)},value:(${code})},location.origin);`;
-      document.documentElement.appendChild(s);
-      s.remove();
-    });
-  }
-
   async function getGmailContext() {
-    // ik lives at GLOBALS[9] — must read from page world (content scripts are isolated)
-    const ik = await readFromPageWorld('window.GLOBALS?.[9]||null');
+    // Content scripts are isolated from page JS — delegate to background worker
+    // which runs chrome.scripting.executeScript in the MAIN world.
+    const resp = await chrome.runtime.sendMessage({ type: 'gsf-get-context' });
+    const ik = resp?.result?.ik || null;
+    let at = resp?.result?.at || null;
 
-    // at: CSRF action token — scan inline scripts
-    let at = null;
-    for (const script of document.scripts) {
-      const t = script.textContent;
-      if (t.length < 20) continue;
-      const m =
-        t.match(/\["GMAIL_AT"(?:,[^\]]*){0,5},"([A-Za-z0-9_-]{20,})"\]/) ||
-        t.match(/"at"\s*:\s*"([A-Za-z0-9_-]{20,})"/) ||
-        t.match(/GM_ACTION_TOKEN\s*=\s*"([A-Za-z0-9_-]{20,})"/);
-      if (m) { at = m[1]; break; }
+    if (!at) {
+      for (const script of document.scripts) {
+        const t = script.textContent;
+        if (t.length < 20) continue;
+        const m =
+          t.match(/\["GMAIL_AT"(?:,[^\]]*){0,5},"([A-Za-z0-9_-]{20,})"\]/) ||
+          t.match(/"at"\s*:\s*"([A-Za-z0-9_-]{20,})"/) ||
+          t.match(/GM_ACTION_TOKEN\s*=\s*"([A-Za-z0-9_-]{20,})"/);
+        if (m) { at = m[1]; break; }
+      }
     }
     if (!at) at = document.querySelector('[name="at"]')?.value || null;
-
-    if (!at) at = await readFromPageWorld('window.GLOBALS?.[10]?.[2]||null');
 
     return { ik, at };
   }
