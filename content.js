@@ -7,7 +7,7 @@
   async function searchSender(email) {
     const resp = await chrome.runtime.sendMessage({ type: 'gsf-search', email });
     if (resp.error) throw new Error(resp.error);
-    const json = JSON.parse(resp.text.replace(/^\)\]\}'\n?/, ''));
+    const json = JSON.parse(resp.text);
     return parseThreadList(json);
   }
 

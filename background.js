@@ -6,13 +6,31 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       target: { tabId },
       world: 'MAIN',
       func: async (email) => {
-        const ik = window.GLOBALS?.[9];
-        if (!ik) throw new Error('Could not read Gmail session (ik). Try reloading Gmail.');
-        const m = location.pathname.match(/^(\/mail\/u\/\d+\/)/);
-        const base = `https://mail.google.com${m ? m[1] : '/mail/u/0/'}`;
-        const q = encodeURIComponent(`from:${email} in:inbox`);
-        const url = `${base}?ui=2&ik=${ik}&search=query&q=${q}&start=0&num=50&rt=j`;
-        const res = await fetch(url, { credentials: 'include' });
+        const m = location.pathname.match(/\/u\/(\d+)\//);
+        const acct = m ? m[1] : '0';
+        const now = Date.now();
+        const uuid = crypto.randomUUID().toUpperCase();
+        const query = `from:${email} in:inbox`;
+
+        const body = JSON.stringify([
+          [79, 101, null, query,
+            [null, null, null, null, 0, null, null, null, null, null, null, now, 10800000,
+              null, null, null, null, null, null, null, null, null, null, 0, 0, 0, 0],
+            'itemlist-ViewType(79)-1', 1, 2000, null, 0, null, null, null, 1, null,
+            [1, 0, 0, null, null, null, 1, uuid, null, 1, null, null, 1, null, 1,
+              null, null, null, null, null, 0],
+            null, null, 1, null, null, 0, 1, 0, [], 0, 0, null, null, null, null, null,
+            [now - 86400000, null, null, 55],
+          ],
+          null,
+          [0, 1, null, null, 1, 1, 1],
+        ]);
+
+        const res = await fetch(
+          `https://mail.google.com/sync/u/${acct}/i/bv?hl=en&c=1&rt=r&pt=ji`,
+          { method: 'POST', credentials: 'include',
+            headers: { 'Content-Type': 'application/json' }, body },
+        );
         if (!res.ok) throw new Error(`Search failed (HTTP ${res.status})`);
         return res.text();
       },
@@ -44,7 +62,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         const mb = location.pathname.match(/^(\/mail\/u\/\d+\/)/);
         const base = `https://mail.google.com${mb ? mb[1] : '/mail/u/0/'}`;
         const body = new URLSearchParams({ ui: '2', ik, action, at });
-        ids.forEach((id) => body.append('t', id));
+        ids.forEach((id) => body.append('t', id.replace(/^thread-f:/, '')));
         const res = await fetch(base, {
           method: 'POST',
           credentials: 'include',
