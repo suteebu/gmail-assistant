@@ -11,7 +11,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         const m = location.pathname.match(/^(\/mail\/u\/\d+\/)/);
         const base = `https://mail.google.com${m ? m[1] : '/mail/u/0/'}`;
         const q = encodeURIComponent(`from:${email} in:inbox`);
-        const url = `${base}?ui=2&ik=${ik}&view=tl&search=query&q=${q}&start=0&num=50&rt=j`;
+        const url = `${base}?ui=2&ik=${ik}&search=query&q=${q}&start=0&num=50&rt=j`;
         const res = await fetch(url, { credentials: 'include' });
         if (!res.ok) throw new Error(`Search failed (HTTP ${res.status})`);
         return res.text();
