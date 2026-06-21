@@ -6,9 +6,26 @@
 
   // ── Gmail session context ─────────────────────────────────────────────────
 
-  function getGmailContext() {
-    // ik lives at GLOBALS[9] in current Gmail
-    const ik = window.GLOBALS?.[9] || null;
+  function readFromPageWorld(code) {
+    return new Promise((resolve) => {
+      const msgType = 'gsf-' + Math.random().toString(36).slice(2);
+      const handler = (e) => {
+        if (e.source === window && e.data?.type === msgType) {
+          window.removeEventListener('message', handler);
+          resolve(e.data.value);
+        }
+      };
+      window.addEventListener('message', handler);
+      const s = document.createElement('script');
+      s.textContent = `window.postMessage({type:${JSON.stringify(msgType)},value:(${code})},location.origin);`;
+      document.documentElement.appendChild(s);
+      s.remove();
+    });
+  }
+
+  async function getGmailContext() {
+    // ik lives at GLOBALS[9] — must read from page world (content scripts are isolated)
+    const ik = await readFromPageWorld('window.GLOBALS?.[9]||null');
 
     // at: CSRF action token — scan inline scripts
     let at = null;
@@ -23,6 +40,8 @@
     }
     if (!at) at = document.querySelector('[name="at"]')?.value || null;
 
+    if (!at) at = await readFromPageWorld('window.GLOBALS?.[10]?.[2]||null');
+
     return { ik, at };
   }
 
@@ -34,7 +53,7 @@
   // ── Gmail internal API calls ──────────────────────────────────────────────
 
   async function searchSender(email) {
-    const { ik } = getGmailContext();
+    const { ik } = await getGmailContext();
     if (!ik) throw new Error('Could not read Gmail session (ik). Try reloading Gmail.');
 
     const q = encodeURIComponent(`from:${email} in:inbox`);
@@ -86,7 +105,7 @@
   async function trashThreads(ids)   { await batchAction('deleteMessages',  ids); }
 
   async function batchAction(action, ids) {
-    const { ik, at } = getGmailContext();
+    const { ik, at } = await getGmailContext();
     if (!ik || !at) throw new Error('Could not read Gmail session tokens. Try reloading Gmail.');
 
     const body = new URLSearchParams({ ui: '2', ik, action, at });
