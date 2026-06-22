@@ -23,13 +23,13 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
             [now - 86400000, null, null, 55],
           ],
           null,
-          [0, 1, null, null, 1, 1, 1],
+          [0, 5, null, null, 1, 1, 1],
         ]);
 
         const res = await fetch(
           `https://mail.google.com/sync/u/${acct}/i/bv?hl=en&c=1&rt=r&pt=ji`,
           { method: 'POST', credentials: 'include',
-            headers: { 'Content-Type': 'application/json' }, body },
+            headers: { 'Content-Type': 'text/plain;charset=UTF-8' }, body },
         );
         if (!res.ok) throw new Error(`Search failed (HTTP ${res.status})`);
         return res.text();
