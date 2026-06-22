@@ -10,7 +10,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         const acct = m ? m[1] : '0';
         const now = Date.now();
         const uuid = crypto.randomUUID().toUpperCase();
-        const query = `from:${email} in:inbox`;
+        const query = `from:${email}`;
 
         const body = JSON.stringify([
           [79, 101, null, query,
